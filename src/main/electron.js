@@ -20,6 +20,7 @@ import { readPdfXml } from './pdf-xml.js';
 import { buildHtmlExport } from './html-export.js';
 import FileWatcher from './file-watcher.js';
 import { ConfigPathGrants } from './config-paths.js';
+import { setPluginMenu, loadLocalPlugins } from './local-plugins.js';
 import { getUrlParams, getUrlParamsFiles } from './url-params.js';
 import elecUpPkg from 'electron-updater';
 const {autoUpdater} = elecUpPkg;
@@ -34,6 +35,14 @@ import {disableUpdate as disUpPkg} from './disableUpdate.js';
 // instruction, and on arm64 the handler returns to that same instruction, so
 // the process spins forever instead of crashing
 process.removeAllListeners('SIGTRAP');
+
+if (app.isPackaged && process.platform === 'win32')
+{
+	const data = path.join(path.dirname(process.execPath), 'data');
+	fs.mkdirSync(data, {recursive: true});
+	app.setPath('userData', data);
+	app.setPath('sessionData', data);
+}
 
 let store;
 
@@ -1928,7 +1937,11 @@ app.whenReady().then(() =>
 		const menuBar = menu.buildFromTemplate(template)
 		menu.setApplicationMenu(menuBar)
 	}
-	else //hide  menubar in win/linux
+	else if (process.platform === 'win32')
+	{
+		setPluginMenu();
+	}
+	else
 	{
 		menu.setApplicationMenu(null)
 	}
@@ -4127,6 +4140,13 @@ ipcMain.on('app-load-finished', (e) =>
 	if (!validateSender(e.senderFrame)) return null;
 
 	configPathGrants.collect(e.sender);
+	const frame = e.senderFrame;
+	if (process.platform === 'win32' && frame === e.sender.mainFrame &&
+		windowsRegistry.some(win => !win.isDestroyed() && win.webContents === e.sender) &&
+		url.fileURLToPath(frame.url) === path.join(codeDir, 'index.html'))
+	{
+		loadLocalPlugins(frame).catch(err => console.error('Plugin loading failed', err));
+	}
 });
 
 ipcMain.on("rendererReq", async (event, args) =>

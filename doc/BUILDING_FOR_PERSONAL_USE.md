@@ -110,28 +110,7 @@ building.
 
 ## 5. Or: build with GitHub Actions on your fork
 
-If you don't have a Linux machine (or don't want to install the
-toolchain), your fork can build in GitHub Actions using the
-[`personal-build.yml`](../.github/workflows/personal-build.yml)
-workflow. It needs no secrets, never publishes anything, and only runs
-when you trigger it:
-
-1. Commit your change and push it to your fork — Actions builds what is
-   on GitHub, not your local working tree:
-
-   ```
-   git add -A
-   git commit -m "my change"
-   git push
-   ```
-
-2. On your fork's GitHub page, open the **Actions** tab and enable
-   workflows (GitHub disables them on new forks until you confirm).
-3. Select **Personal Unsigned Build** in the left sidebar and press
-   **Run workflow**. In the dialog, make sure the *Use workflow from*
-   branch is the one you pushed your change to, and run.
-4. When the run finishes, download the packages from the
-   **Artifacts** section of the run page.
+See the [Windows x64 portable build instructions](../README.md#windows-x64-portable-fork) for the fork's ZIP and Scoop release workflow.
 
 ## 6. Keeping your fork up to date
 

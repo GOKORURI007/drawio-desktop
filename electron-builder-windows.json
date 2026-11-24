@@ -1,0 +1,5 @@
+{
+  "extends": "./electron-builder-linux-mac.json",
+  "productName": "drawio",
+  "win": { "target": "dir", "icon": "build/icon.png" }
+}

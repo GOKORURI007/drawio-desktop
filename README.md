@@ -103,3 +103,9 @@ We are grateful for community involvement, bug reports, & feature requests. We d
 not wish to come off as anything but welcoming, however, we've
 made the decision to keep this project closed to contributions for 
 the long term viability of the project.
+
+## Windows x64 portable fork
+
+Push a version tag such as `v32.7.4.1` to build the portable ZIP and publish it with a SHA-256-pinned `drawio-desktop.json` on the tag's GitHub Release. A manual run produces workflow artifacts for testing. Copy the release manifest into your Scoop bucket as `bucket/drawio-desktop.json`, then install with `scoop install <bucket>/drawio-desktop`. The executable also runs directly from the extracted ZIP.
+
+The Windows build stores its settings, browser profile and approved plugins in the writable `data` folder beside `drawio.exe`. Scoop persists this folder across upgrades. Use **Local Plugins → Install JavaScript plugin…** to select and approve a trusted local draw.io script. Open a new editor window to load the installed copy. Reimporting the same filename replaces it. **Local Plugins → Remove plugin** stops it loading in newly opened windows. Close existing windows to unload their copies.
