@@ -28,7 +28,7 @@ const helpers = section('function blessPath(p)', '// Paths declared') + '\n' +
 
 function fixture(t)
 {
-	const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'drawio-backup-')));
+	const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'drawio-backup-')));
 	t.after(() => fs.rmSync(root, {recursive: true, force: true}));
 	const directory = path.join(root, 'diagrams');
 	const privateDir = path.join(root, 'private');

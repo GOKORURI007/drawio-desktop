@@ -55,7 +55,7 @@ async function load(configGrants, config)
 
 function files(t, ...names)
 {
-	const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'drawio-config-')));
+	const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'drawio-config-')));
 	t.after(() => fs.rmSync(root, {recursive: true, force: true}));
 
 	return names.map((name) =>
@@ -330,7 +330,7 @@ describe('ConfigPathGrants', () =>
 
 	test('keeps the form that reads are checked against for a mapped network drive', async (t) =>
 	{
-		const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'drawio-config-')));
+		const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'drawio-config-')));
 		t.after(() => fs.rmSync(root, {recursive: true, force: true}));
 		const share = path.join(root, 'share');
 		const drive = path.join(root, 'Z');
