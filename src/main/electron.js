@@ -20,7 +20,7 @@ import { readPdfXml } from './pdf-xml.js';
 import { buildHtmlExport } from './html-export.js';
 import FileWatcher from './file-watcher.js';
 import { ConfigPathGrants } from './config-paths.js';
-import { setPluginMenu, loadLocalPlugins } from './local-plugins.js';
+import { installLocalPlugin, showRemovePluginMenu, loadLocalPlugins } from './local-plugins.js';
 import { getUrlParams, getUrlParamsFiles } from './url-params.js';
 import elecUpPkg from 'electron-updater';
 const {autoUpdater} = elecUpPkg;
@@ -1936,10 +1936,6 @@ app.whenReady().then(() =>
 
 		const menuBar = menu.buildFromTemplate(template)
 		menu.setApplicationMenu(menuBar)
-	}
-	else if (process.platform === 'win32')
-	{
-		setPluginMenu();
 	}
 	else
 	{
@@ -4135,17 +4131,22 @@ function getLocalFonts()
 // configuration read it starts, so that read happens before any file content
 // reaches the window. The ipcMain.once listeners in the ready handler wait for
 // it too, to send args-obj.
+function isWindowsEditor(e)
+{
+	const frame = e.senderFrame;
+	return process.platform === 'win32' && frame && frame === e.sender.mainFrame &&
+		windowsRegistry.some(win => !win.isDestroyed() && win.webContents === e.sender) &&
+		frame.url.startsWith('file:') && url.fileURLToPath(frame.url) === path.join(codeDir, 'index.html');
+}
+
 ipcMain.on('app-load-finished', (e) =>
 {
 	if (!validateSender(e.senderFrame)) return null;
 
 	configPathGrants.collect(e.sender);
-	const frame = e.senderFrame;
-	if (process.platform === 'win32' && frame === e.sender.mainFrame &&
-		windowsRegistry.some(win => !win.isDestroyed() && win.webContents === e.sender) &&
-		url.fileURLToPath(frame.url) === path.join(codeDir, 'index.html'))
+	if (isWindowsEditor(e))
 	{
-		loadLocalPlugins(frame).catch(err => console.error('Plugin loading failed', err));
+		loadLocalPlugins(e.senderFrame).catch(err => console.error('Plugin loading failed', err));
 	}
 });
 
@@ -4200,6 +4201,14 @@ ipcMain.on("rendererReq", async (event, args) =>
 			ret = await showSaveDialog(args.defaultPath, args.filters);
 			ret = ret.canceled? null : ret.filePath;
 			dialogOpen = false;
+			break;
+		case 'installDesktopPlugin':
+		case 'removeDesktopPlugin':
+			if (!isWindowsEditor(event)) throw new Error('请在编辑器窗口中管理插件');
+			if (args.action === 'installDesktopPlugin')
+				await installLocalPlugin(BrowserWindow.fromWebContents(event.sender));
+			else
+				showRemovePluginMenu(BrowserWindow.fromWebContents(event.sender));
 			break;
 		case 'isPluginsEnabled':
 			// External plugins were removed; only built-in plugins remain.

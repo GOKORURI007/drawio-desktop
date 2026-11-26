@@ -1,55 +1,52 @@
 import path from 'node:path';
 import {readFile} from 'node:fs/promises';
-import {BrowserWindow, dialog, Menu} from 'electron';
+import {dialog, Menu} from 'electron';
 import Store from 'electron-store';
 
-// Keep the approved snapshot. Later edits to the source file require reimport.
 let library;
+function pluginStore()
+{
+	return library ??= new Store({name: 'desktop-plugins', defaults: {plugins: []}});
+}
 
-async function install(win)
+export async function installLocalPlugin(win)
 {
 	const chosen = await dialog.showOpenDialog(win, {
-		title: 'Install local draw.io plugin', properties: ['openFile'],
-		filters: [{name: 'JavaScript plugin', extensions: ['js']}]
+		title: '载入本地插件', buttonLabel: '选择插件', properties: ['openFile'],
+		filters: [{name: 'JavaScript 插件', extensions: ['js']}]
 	});
 	if (chosen.canceled) return;
 	const file = chosen.filePaths[0];
-	if (path.extname(file).toLowerCase() !== '.js') throw Error('Select a .js plugin');
+	if (path.extname(file).toLowerCase() !== '.js') throw Error('请选择 .js 插件文件');
 	const name = path.basename(file);
 	const source = await readFile(file, 'utf8');
 	const answer = await dialog.showMessageBox(win, {
-		type: 'warning', message: 'Trust and install ' + name + '?',
-		detail: file + '\nThis script will run in the editor and can access your diagrams. Installing again replaces the copy with the same name. Changes apply to newly opened editor windows.',
-		buttons: ['Cancel', 'Install'], defaultId: 0, cancelId: 0
+		type: 'warning', title: '安装本地插件', message: '信任并安装“' + name + '”？',
+		detail: file + '\n插件可以访问图表。安装后请打开新的编辑器窗口。同名插件将被替换。',
+		buttons: ['取消', '安装'], defaultId: 0, cancelId: 0
 	});
 	if (answer.response === 1)
 	{
-		const others = library.get('plugins').filter(p => p.name !== name);
-		library.set('plugins', [...others, {name, source}]);
-		setPluginMenu();
+		const store = pluginStore();
+		const others = store.get('plugins').filter(p => p.name !== name);
+		store.set('plugins', [...others, {name, source}]);
 	}
 }
 
-export function setPluginMenu()
+export function showRemovePluginMenu(win)
 {
-	library ??= new Store({name: 'desktop-plugins', defaults: {plugins: []}});
-	const plugins = library.get('plugins');
-	Menu.setApplicationMenu(Menu.buildFromTemplate([{label: 'Local Plugins', submenu: [
-		{label: 'Install JavaScript plugin…', click: (_, win) => {
-			if (win instanceof BrowserWindow) install(win).catch(err => dialog.showErrorBox('Plugin installation failed', err.message));
-		}},
-		{label: 'Remove plugin', enabled: plugins.length > 0, submenu: plugins.map(({name}) => ({
-			label: name, click: () => {
-				library.set('plugins', library.get('plugins').filter(p => p.name !== name));
-				setPluginMenu();
-			}
-		}))}
-	]}]));
+	const store = pluginStore();
+	const entries = store.get('plugins').map(({name}) => ({
+		label: name, click: () => store.set('plugins', store.get('plugins').filter(p => p.name !== name))
+	}));
+	Menu.buildFromTemplate(entries.length ? entries : [{label: '暂无本地插件', enabled: false}]).popup({window: win});
 }
 
 export async function loadLocalPlugins(frame)
 {
-	for (const plugin of library.get('plugins'))
+	const menuScript = await readFile(new URL('./local-plugins-ui.js', import.meta.url), 'utf8');
+	await frame.executeJavaScript(menuScript);
+	for (const plugin of pluginStore().get('plugins'))
 	{
 		try { await frame.executeJavaScript(plugin.source + '\n;void 0'); }
 		catch (err) { console.error('Could not load draw.io plugin', plugin.name, err); }
